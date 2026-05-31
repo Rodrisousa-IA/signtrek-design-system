@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignTrek — User Flow Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --v:#7F77DD;--vl:#F0EFFE;--vd:#251D5C;
+  --g:#1D9E75;--gl:#E1F5EE;--gd:#085041;
+  --a:#BA7517;--al:#FAEEDA;--ad:#633806;
+  --c:#D85A30;--cl:#FAECE7;--cd:#712B13;
+  --b:#378ADD;--bl:#E6F1FB;--bd:#0C447C;
+  --gray:#888780;--grayl:#F1EFE8;--grayd:#2C2C2A;
+  --teal:#0F6E56;--midnight:#0D0D12;
+  --bg:#F4F3EF;--surface:#FFFFFF;--border:#D9D7CF;
+  --text:#1A1A18;--text2:#5F5E5A;--text3:#8C8B84;
+  --font:'Inter',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);overflow:hidden;height:100vh;width:100vw}
+.toolbar{position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--midnight);height:54px;display:flex;align-items:center;padding:0 16px;gap:10px}
+.brand{font-size:15px;font-weight:600;color:#fff;white-space:nowrap}
+.brand span{color:#AFA9EC;font-weight:400}
+.sep{width:1px;height:24px;background:rgba(255,255,255,.15);flex-shrink:0}
+.tbtn{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:7px;border:none;background:transparent;color:rgba(255,255,255,.65);font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap}
+.tbtn:hover{background:rgba(255,255,255,.1);color:#fff}
+.tbtn.active{background:var(--v);color:#fff}
+.tbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.zoomd{font-size:11px;color:rgba(255,255,255,.5);min-width:40px;text-align:center;font-family:'JetBrains Mono',monospace}
+.filters{display:flex;gap:3px;overflow-x:auto;flex:1}
+.filters::-webkit-scrollbar{height:0}
+.search{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 11px;flex-shrink:0}
+.search input{background:none;border:none;color:#fff;font-size:12px;outline:none;width:150px;font-family:var(--font)}
+.search input::placeholder{color:rgba(255,255,255,.4)}
+.wrap{position:fixed;top:54px;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}
+.wrap.panning{cursor:grabbing}
+.canvas{position:absolute;transform-origin:0 0}
+.lane{position:absolute;border-radius:14px;border:1.5px solid;background:var(--surface)}
+.lane-head{position:absolute;display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:10px;font-size:13px;font-weight:600;z-index:6}
+.lane-head .dot{width:9px;height:9px;border-radius:50%}
+.lane-count{font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.6)}
+.screen{position:absolute;width:234px;background:var(--surface);border-radius:11px;border:2px solid;cursor:pointer;transition:transform .15s,box-shadow .15s;z-index:10;overflow:hidden}
+.screen:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.13);z-index:20}
+.screen.dim{opacity:.16}
+.screen.hl{box-shadow:0 0 0 3px var(--v),0 10px 28px rgba(127,119,221,.35);z-index:30}
+.s-strip{height:6px}
+.s-body{padding:11px 13px 13px}
+.s-num{font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text3);margin-bottom:3px}
+.s-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.25}
+.s-desc{font-size:10px;color:var(--text3);line-height:1.4;margin-bottom:9px;min-height:28px}
+.s-tags{display:flex;flex-direction:column;gap:4px}
+.tag{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;font-size:9.5px;font-weight:500;border:1px solid;line-height:1.3}
+.tag-act{background:var(--vl);border-color:var(--v);color:var(--vd)}
+.tag-cond{background:var(--al);border-color:var(--a);color:var(--ad)}
+.tag-ok{background:var(--gl);border-color:var(--g);color:var(--gd)}
+.tag-err{background:var(--cl);border-color:var(--c);color:var(--cd)}
+.tag-back{background:var(--grayl);border-color:var(--gray);color:var(--grayd)}
+.tag-more{background:transparent;border:1px dashed var(--border);color:var(--text3);justify-content:center;cursor:pointer}
+.conn-layer{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;z-index:1}
+.conn-path{fill:none;stroke-width:2;opacity:.5;transition:opacity .2s}
+.conn-path.dim{opacity:.04}
+.detail{position:fixed;top:54px;right:0;width:340px;height:calc(100vh - 54px);background:var(--surface);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.detail.open{transform:translateX(0)}
+.d-head{padding:22px 22px 18px;border-bottom:1px solid var(--border);position:relative;flex-shrink:0}
+.d-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:600;margin-bottom:10px}
+.d-title{font-size:19px;font-weight:600;color:var(--text);margin-bottom:5px;line-height:1.2}
+.d-desc{font-size:12px;color:var(--text3);line-height:1.5}
+.d-close{position:absolute;top:18px;right:18px;width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:19px;line-height:1}
+.d-close:hover{background:var(--bg);color:var(--text)}
+.d-body{padding:18px 22px;flex:1}
+.d-sec{margin-bottom:22px}
+.d-sec-t{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.d-sec-t .n{background:var(--bg);border-radius:8px;padding:1px 7px;font-size:9px}
+.d-tags{display:flex;flex-direction:column;gap:6px}
+.d-tag{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:9px;border:1px solid;font-size:11.5px;line-height:1.45}
+.d-tag .ic{font-size:12px;flex-shrink:0;margin-top:1px;font-weight:700}
+.d-tag.clickable{cursor:pointer;transition:transform .12s}
+.d-tag.clickable:hover{transform:translateX(3px)}
+.d-nav{display:flex;gap:8px;padding:16px 22px;border-top:1px solid var(--border);flex-shrink:0}
+.nbtn{flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:none;font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s}
+.nbtn:hover{background:var(--bg);color:var(--text)}
+.nbtn.primary{background:var(--v);color:#fff;border-color:var(--v)}
+.nbtn.primary:hover{background:#625BB8}
+.legend{position:fixed;bottom:20px;left:20px;background:rgba(13,13,18,.88);border:1px solid rgba(255,255,255,.1);border-radius:11px;padding:13px 15px;z-index:200;backdrop-filter:blur(10px)}
+.legend-t{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:9px}
+.legend-i{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:10px;color:rgba(255,255,255,.65)}
+.legend-i:last-child{margin-bottom:0}
+.legend-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.minimap{position:fixed;bottom:20px;right:20px;width:210px;height:130px;background:rgba(13,13,18,.88);border:1px solid rgba(127,119,221,.4);border-radius:11px;overflow:hidden;z-index:200;backdrop-filter:blur(10px);cursor:pointer}
+.minimap-vp{position:absolute;border:1.5px solid var(--v);background:rgba(127,119,221,.12);border-radius:3px;pointer-events:none}
+.sresults{position:fixed;top:60px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;width:280px;max-height:340px;overflow-y:auto;z-index:600;box-shadow:0 12px 32px rgba(0,0,0,.15)}
+.sresult{padding:11px 15px;cursor:pointer;border-bottom:1px solid var(--border);font-size:12px}
+.sresult:last-child{border-bottom:none}
+.sresult:hover{background:var(--bg)}
+.sresult-n{font-weight:500;color:var(--text);margin-bottom:2px}
+.sresult-a{font-size:10px;color:var(--text3)}
+.tooltip{position:fixed;background:var(--midnight);color:#fff;font-size:11px;padding:6px 10px;border-radius:7px;pointer-events:none;z-index:800;white-space:nowrap;opacity:0;transition:opacity .15s}
+.help{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(13,13,18,.75);color:rgba(255,255,255,.6);font-size:11px;padding:7px 16px;border-radius:20px;z-index:200;backdrop-filter:blur(10px);pointer-events:none;transition:opacity .5s}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <div class="brand">SignTrek <span>— User Flow</span></div>
+  <div class="sep"></div>
+  <button class="tbtn" onclick="zoom(1.2)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/></svg></button>
+  <button class="tbtn" onclick="zoom(.8)"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M8 11h6"/></svg></button>
+  <button class="tbtn" onclick="resetView()"><svg viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"/></svg></button>
+  <span class="zoomd" id="zoomd">100%</span>
+  <div class="sep"></div>
+  <div class="filters">
+    <button class="tbtn active" onclick="filterSec('all',this)">Tudo</button>
+    <button class="tbtn" onclick="filterSec('public',this)">Público</button>
+    <button class="tbtn" onclick="filterSec('auth',this)">Auth</button>
+    <button class="tbtn" onclick="filterSec('onboarding',this)">Onboarding</button>
+    <button class="tbtn" onclick="filterSec('dashboard',this)">Dashboard</button>
+    <button class="tbtn" onclick="filterSec('docs',this)">Docs</button>
+    <button class="tbtn" onclick="filterSec('editor',this)">Editor</button>
+    <button class="tbtn" onclick="filterSec('templates',this)">Templates</button>
+    <button class="tbtn" onclick="filterSec('sign',this)">Assinatura</button>
+    <button class="tbtn" onclick="filterSec('workspace',this)">Workspace</button>
+    <button class="tbtn" onclick="filterSec('config',this)">Config</button>
+  </div>
+  <div class="search">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="sinput" placeholder="Buscar tela..." oninput="doSearch(this.value)">
+  </div>
+</div>
+<div id="sresults" class="sresults" style="display:none"></div>
+<div class="wrap" id="wrap"><div class="canvas" id="canvas"><svg class="conn-layer" id="svg" style="width:3800px;height:3400px"></svg></div></div>
+<div class="detail" id="detail">
+  <div class="d-head"><button class="d-close" onclick="closeDetail()">×</button><div class="d-badge" id="d-badge"></div><div class="d-title" id="d-title"></div><div class="d-desc" id="d-desc"></div></div>
+  <div class="d-body" id="d-body"></div>
+  <div class="d-nav" id="d-nav"></div>
+</div>
+<div class="legend">
+  <div class="legend-t">Legenda</div>
+  <div class="legend-i"><div class="legend-dot" style="background:var(--v)"></div>Ação do usuário</div>
+  <div class="legend-i"><div class="legend-dot" style="background:var(--a)"></div>Condição / Decisão</div>
+  <div class="legend-i"><div class="legend-dot" style="background:var(--g)"></div>Caminho de sucesso</div>
+  <div class="legend-i"><div class="legend-dot" style="background:var(--c)"></div>Erro / Alerta</div>
+  <div class="legend-i"><div class="legend-dot" style="background:var(--gray)"></div>Voltar / Cancelar</div>
+</div>
+<div class="minimap" id="minimap"><div class="minimap-vp" id="mvp"></div></div>
+<div class="help" id="help">Arraste para navegar · Scroll para zoom · Clique numa tela para detalhes</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+const SECTIONS={
+  public:{label:'01 · Área Pública',color:'#378ADD',bg:'#E6F1FB'},
+  auth:{label:'02 · Autenticação',color:'#BA7517',bg:'#FAEEDA'},
+  onboarding:{label:'03 · Onboarding',color:'#1D9E75',bg:'#E1F5EE'},
+  dashboard:{label:'04 · Dashboard',color:'#7F77DD',bg:'#F0EFFE'},
+  docs:{label:'05 · Documentos',color:'#0F6E56',bg:'#E1F5EE'},
+  editor:{label:'06 · Editor',color:'#534AB7',bg:'#EEEDFE'},
+  templates:{label:'07 · Templates',color:'#1D9E75',bg:'#E1F5EE'},
+  sign:{label:'08 · Assinatura',color:'#BA7517',bg:'#FAEEDA'},
+  workspace:{label:'09 · Workspace',color:'#1D9E75',bg:'#E1F5EE'},
+  config:{label:'10 · Configurações',color:'#888780',bg:'#F1EFE8'},
+};
+const SCREENS=[
+  {id:'landing',section:'public',title:'Landing Page',desc:'Apresentação e proposta de valor',
+    actions:[{label:'Clica "Começar grátis"',type:'ok',to:'cadastro'},{label:'Clica "Ver preços"',type:'act',to:'precos'},{label:'Clica "Entrar"',type:'act',to:'login'},{label:'Login com Google',type:'act',to:'oauth'},{label:'Login com Microsoft',type:'act',to:'oauth'}]},
+  {id:'precos',section:'public',title:'Página de Preços',desc:'Comparativo Free · Pro · Enterprise',
+    actions:[{label:'"Começar grátis" (Free)',type:'ok',to:'cadastro'},{label:'"Assinar Pro"',type:'ok',to:'cadastro'},{label:'"Falar com vendas"',type:'act'},{label:'← Voltar para Landing',type:'back',to:'landing'}]},
+  {id:'login',section:'auth',title:'Login',desc:'Email e senha · OAuth Google/MS',
+    actions:[{label:'Digita email e senha',type:'act'},{label:'"Entrar" → verifica',type:'act'},{label:'Credenciais inválidas → erro',type:'err'},{label:'Conta não existe → cadastro',type:'cond',to:'cadastro'},{label:'"Esqueci minha senha"',type:'back',to:'esqsenha'},{label:'"Criar conta"',type:'act',to:'cadastro'},{label:'"Entrar com Google"',type:'act',to:'oauth'},{label:'Lembrar de mim (30 dias)',type:'act'}]},
+  {id:'cadastro',section:'auth',title:'Cadastro — Passo 1',desc:'Dados pessoais: nome e email',
+    actions:[{label:'Preenche nome completo',type:'act'},{label:'Preenche email',type:'act'},{label:'Email já existe → erro+login',type:'cond',to:'login'},{label:'"Continuar" → valida',type:'ok',to:'cadplano'},{label:'← Voltar para Login',type:'back',to:'login'}]},
+  {id:'cadplano',section:'auth',title:'Cadastro — Passo 2',desc:'Escolha do plano e trial 14 dias',
+    actions:[{label:'Seleciona plano (Free/Pro)',type:'act'},{label:'Plano Pro → insere cartão',type:'cond'},{label:'"Criar conta" → verificação',type:'ok',to:'otpemail'},{label:'Trial 14d Pro sem cartão',type:'act'},{label:'← Voltar para Passo 1',type:'back',to:'cadastro'}]},
+  {id:'oauth',section:'auth',title:'OAuth Google/MS',desc:'Login social via redirecionamento',
+    actions:[{label:'Redireciona p/ Google/MS',type:'act'},{label:'Conta existe → Dashboard',type:'ok',to:'dashvazio'},{label:'Conta nova → Cadastro P2',type:'cond',to:'cadplano'},{label:'Erro permissão → Login',type:'err',to:'login'}]},
+  {id:'esqsenha',section:'auth',title:'Esqueci a Senha',desc:'Inserir email de recuperação',
+    actions:[{label:'Digita email cadastrado',type:'act'},{label:'"Enviar código"',type:'act'},{label:'Email não existe → erro',type:'err'},{label:'Código enviado → OTP',type:'ok',to:'otpemail'},{label:'← Voltar para Login',type:'back',to:'login'}]},
+  {id:'otpemail',section:'auth',title:'Código do Email',desc:'OTP de 6 dígitos por email',
+    actions:[{label:'Insere 6 dígitos',type:'act'},{label:'Código correto → Nova Senha',type:'ok',to:'novasenha'},{label:'Errado/expirado → erro',type:'err'},{label:'"Reenviar código"',type:'act'},{label:'← Voltar',type:'back',to:'esqsenha'}]},
+  {id:'novasenha',section:'auth',title:'Nova Senha',desc:'Campo com indicador de força',
+    actions:[{label:'Digita nova senha',type:'act'},{label:'Indicador fraca/boa/forte',type:'cond'},{label:'Confirma senha',type:'act'},{label:'Senhas diferentes → erro',type:'err'},{label:'"Redefinir" → Verificada',type:'ok',to:'contaver'}]},
+  {id:'contaver',section:'auth',title:'Conta Verificada',desc:'Confirmação — acesso liberado',
+    actions:[{label:'Mensagem de sucesso',type:'act'},{label:'"Acessar" → Onboarding',type:'ok',to:'bvindas'},{label:'Se configurado → Dashboard',type:'ok',to:'dashvazio'}]},
+  {id:'bvindas',section:'onboarding',title:'Boas-vindas',desc:'Primeiro acesso após ativação',
+    actions:[{label:'Exibe nome e plano',type:'act'},{label:'"Configurar workspace"',type:'ok',to:'confws'},{label:'"Pular" → Dashboard',type:'back',to:'dashvazio'}]},
+  {id:'confws',section:'onboarding',title:'Configurar Workspace',desc:'Nome da empresa e segmento',
+    actions:[{label:'Digita nome da empresa',type:'act'},{label:'Seleciona segmento',type:'act'},{label:'"Continuar"',type:'ok',to:'persm'},{label:'← Voltar',type:'back',to:'bvindas'}]},
+  {id:'persm',section:'onboarding',title:'Personalizar Marca',desc:'Logo e cor primária',
+    actions:[{label:'Upload logo (≤2MB)',type:'act'},{label:'Escolhe cor primária',type:'act'},{label:'Preview ao vivo',type:'act'},{label:'"Continuar"',type:'ok',to:'primed'},{label:'"Pular"',type:'back',to:'primed'}]},
+  {id:'primed',section:'onboarding',title:'Primeiro Documento',desc:'Criar agora ou pular',
+    actions:[{label:'"Criar do zero" → Editor',type:'act',to:'editor'},{label:'"Usar template" → Galeria',type:'act',to:'galeria'},{label:'"Pular" → Tour',type:'back',to:'tourok'}]},
+  {id:'tourok',section:'onboarding',title:'Tour Concluído',desc:'Checklist de setup finalizado',
+    actions:[{label:'Checklist de 5 features',type:'act'},{label:'Cada item → feature',type:'act'},{label:'"Ir para Dashboard"',type:'ok',to:'dashvazio'}]},
+  {id:'dashvazio',section:'dashboard',title:'Dashboard — Vazio',desc:'Empty state — usuário novo',
+    actions:[{label:'Checklist onboarding',type:'act'},{label:'"Criar documento" → Editor',type:'ok',to:'editor'},{label:'"Ver templates" → Galeria',type:'act',to:'galeria'},{label:'"Convidar membros"',type:'act',to:'membros'},{label:'Após 1º doc → Dashboard Docs',type:'cond',to:'dashd'}]},
+  {id:'dashd',section:'dashboard',title:'Dashboard — Docs',desc:'Métricas e atividade recente',
+    actions:[{label:'Clica doc → Detalhe',type:'act',to:'detdoc'},{label:'"Novo documento" → Editor',type:'ok',to:'editor'},{label:'Templates → Galeria',type:'act',to:'galeria'},{label:'Sino → Notificações',type:'act',to:'notif'},{label:'Sidebar → Workspace/Config',type:'act'},{label:'Busca global → Docs',type:'act',to:'listap'}]},
+  {id:'notif',section:'dashboard',title:'Notificações',desc:'Central de alertas e atividade',
+    actions:[{label:'Alerta assinado → Detalhe',type:'act',to:'detdoc'},{label:'Prazo expirando → Status',type:'act',to:'statenv'},{label:'Marca como lida',type:'act'},{label:'Limpar todas',type:'act'},{label:'← Voltar',type:'back',to:'dashd'}]},
+  {id:'listav',section:'docs',title:'Lista — Vazia',desc:'Empty state + CTA criar',
+    actions:[{label:'"Criar documento" → Editor',type:'ok',to:'editor'},{label:'"Ver templates" → Galeria',type:'act',to:'galeria'}]},
+  {id:'listap',section:'docs',title:'Lista — Preenchida',desc:'Filtros, busca e ordenação',
+    actions:[{label:'Clica no doc → Detalhe',type:'act',to:'detdoc'},{label:'Filtro por status',type:'cond'},{label:'Busca por nome',type:'act'},{label:'"Novo documento" → Editor',type:'ok',to:'editor'},{label:'Ações em lote',type:'act'},{label:'← Dashboard',type:'back',to:'dashd'}]},
+  {id:'detdoc',section:'docs',title:'Detalhe do Documento',desc:'Status, signatários e ações',
+    actions:[{label:'"Editar" → Editor',type:'ok',to:'editor'},{label:'"Enviar p/ assinar"',type:'ok',to:'confenv'},{label:'"Histórico de versões"',type:'act',to:'histv'},{label:'"Trilha de auditoria"',type:'act',to:'audit'},{label:'"Baixar PDF"',type:'act'},{label:'"Cancelar envelope"',type:'err'},{label:'"Reenviar" (se expirado)',type:'back'},{label:'← Voltar para Lista',type:'back',to:'listap'}]},
+  {id:'histv',section:'docs',title:'Histórico de Versões',desc:'Versões com opção de restaurar',
+    actions:[{label:'Lista versões c/ data',type:'act'},{label:'"Restaurar versão"',type:'cond'},{label:'← Voltar para Detalhe',type:'back',to:'detdoc'}]},
+  {id:'audit',section:'docs',title:'Trilha de Auditoria',desc:'Log cronológico de eventos',
+    actions:[{label:'Log completo de eventos',type:'act'},{label:'"Exportar log" PDF',type:'act'},{label:'← Voltar para Detalhe',type:'back',to:'detdoc'}]},
+  {id:'editor',section:'editor',title:'Editor Principal',desc:'Toolbar · blocos · campos · IA',
+    actions:[{label:'Digita/formata conteúdo',type:'act'},{label:'Menu "/" → insere bloco',type:'act'},{label:'Campo dinâmico {{var}}',type:'act'},{label:'Barra IA → gera cláusula',type:'act'},{label:'"Preview A4"',type:'act',to:'preva4'},{label:'"Config. Documento"',type:'act',to:'confdoc'},{label:'"Salvar rascunho" → Lista',type:'ok',to:'listap'},{label:'"Enviar p/ assinar"',type:'ok',to:'confenv'},{label:'"Sair sem salvar"',type:'err'}]},
+  {id:'preva4',section:'editor',title:'Preview A4',desc:'Visualização formato impressão',
+    actions:[{label:'Vê como ficará o PDF',type:'act'},{label:'"Enviar p/ assinar"',type:'ok',to:'confenv'},{label:'"Baixar PDF" rascunho',type:'act'},{label:'← Voltar para Editor',type:'back',to:'editor'}]},
+  {id:'confdoc',section:'editor',title:'Config. Documento',desc:'Título · expiração · marca',
+    actions:[{label:'Edita título',type:'act'},{label:'Define expiração (date)',type:'act'},{label:'Aplica marca workspace',type:'act'},{label:'"Salvar"',type:'ok'},{label:'← Voltar para Editor',type:'back',to:'editor'}]},
+  {id:'galeria',section:'templates',title:'Galeria de Templates',desc:'Grid filtrado por categoria',
+    actions:[{label:'Filtra por categoria',type:'act'},{label:'Busca por palavra-chave',type:'act'},{label:'Clica template → Preview',type:'act',to:'prevtpl'},{label:'← Dashboard',type:'back',to:'dashd'}]},
+  {id:'prevtpl',section:'templates',title:'Preview do Template',desc:'Visualizar antes de usar',
+    actions:[{label:'Visualiza completo',type:'act'},{label:'"Usar template" → Editor',type:'ok',to:'editor'},{label:'"Editar antes de usar"',type:'act',to:'edittpl'},{label:'← Voltar para Galeria',type:'back',to:'galeria'}]},
+  {id:'edittpl',section:'templates',title:'Editar Template',desc:'Personalizar o modelo',
+    actions:[{label:'Personaliza campos',type:'act'},{label:'"Salvar como meu"',type:'ok'},{label:'"Usar agora" → Editor',type:'ok',to:'editor'},{label:'← Cancelar',type:'back',to:'prevtpl'}]},
+  {id:'confenv',section:'sign',title:'Config. Envio',desc:'Signatários · ordem · mensagem',
+    actions:[{label:'Adiciona signatários',type:'act'},{label:'Ordem sequencial/paralela',type:'cond'},{label:'Escreve mensagem',type:'act'},{label:'Define expiração',type:'act'},{label:'"Enviar agora" → Status',type:'ok',to:'statenv'},{label:'← Voltar para Editor',type:'back',to:'editor'}]},
+  {id:'statenv',section:'sign',title:'Status do Envio',desc:'Acompanhar em tempo real',
+    actions:[{label:'Lista assinou/pendente',type:'act'},{label:'Todos assinaram → Final',type:'cond',to:'docfinal'},{label:'Prazo expirou → Expirado',type:'cond'},{label:'Cancelar envelope',type:'err'},{label:'Reenviar lembrete',type:'act'},{label:'← Dashboard',type:'back',to:'dashd'}]},
+  {id:'pagsign',section:'sign',title:'Pág. do Signatário',desc:'Externa — sem login necessário',
+    actions:[{label:'Link expirado → erro',type:'err'},{label:'Doc cancelado → erro',type:'err'},{label:'Já assinou → aviso',type:'cond'},{label:'Lê o documento',type:'act'},{label:'Chat IA tira dúvida',type:'act'},{label:'Autentica OTP/selfie',type:'cond'},{label:'Assina → confirma',type:'ok',to:'confign'},{label:'Recusa assinar',type:'err'}]},
+  {id:'confign',section:'sign',title:'Confirmação',desc:'Sucesso para o signatário',
+    actions:[{label:'"Assinado com sucesso!"',type:'act'},{label:'Baixar cópia do PDF',type:'act'},{label:'Notifica remetente',type:'ok',to:'docfinal'}]},
+  {id:'docfinal',section:'sign',title:'Documento Final',desc:'PDF com certificado de assinaturas',
+    actions:[{label:'PDF com certificado',type:'act'},{label:'"Baixar PDF"',type:'act'},{label:'"Compartilhar link"',type:'act'},{label:'"Ver auditoria"',type:'act',to:'audit'}]},
+  {id:'membros',section:'workspace',title:'Membros',desc:'Lista com papéis e ações',
+    actions:[{label:'Lista Admin/Editor/Viewer',type:'act'},{label:'"Convidar" → modal',type:'ok',to:'convidar'},{label:'Alterar papel',type:'cond'},{label:'Remover membro',type:'err'},{label:'"Ver convites"',type:'act',to:'pendinv'},{label:'← Dashboard',type:'back',to:'dashd'}]},
+  {id:'convidar',section:'workspace',title:'Convidar Membro',desc:'Email + seleção de papel',
+    actions:[{label:'Digita email',type:'act'},{label:'Seleciona papel',type:'act'},{label:'Já é membro → aviso',type:'cond'},{label:'"Enviar convite"',type:'ok',to:'pendinv'},{label:'← Cancelar',type:'back',to:'membros'}]},
+  {id:'pendinv',section:'workspace',title:'Convites Pendentes',desc:'Gerenciar convites enviados',
+    actions:[{label:'Lista convites c/ status',type:'act'},{label:'Reenviar convite',type:'act'},{label:'Cancelar convite',type:'err'},{label:'← Voltar para Membros',type:'back',to:'membros'}]},
+  {id:'perfil',section:'config',title:'Perfil do Usuário',desc:'Nome, foto e dados pessoais',
+    actions:[{label:'Edita nome e foto',type:'act'},{label:'Altera email',type:'act'},{label:'→ Segurança p/ senha',type:'act',to:'seg2fa'},{label:'Salvar alterações',type:'ok'}]},
+  {id:'seg2fa',section:'config',title:'Segurança e 2FA',desc:'Senha e autenticação 2 fatores',
+    actions:[{label:'Alterar senha',type:'act'},{label:'Ativar 2FA → QR Code',type:'cond'},{label:'Desativar 2FA',type:'err'},{label:'Ver sessões ativas',type:'act'},{label:'Encerrar sessões',type:'err'}]},
+  {id:'marcac',section:'config',title:'Marca do Workspace',desc:'Logo · cor · fonte dos docs',
+    actions:[{label:'Upload novo logo',type:'act'},{label:'Alterar cor primária',type:'act'},{label:'Selecionar fonte',type:'act'},{label:'Preview ao vivo',type:'act'},{label:'Salvar → aplica em todos',type:'ok'}]},
+  {id:'planou',section:'config',title:'Plano e Uso',desc:'Medidor de consumo e limites',
+    actions:[{label:'Uso: docs/storage/membros',type:'act'},{label:'80% → alerta',type:'cond'},{label:'100% → bloqueio+upsell',type:'err'},{label:'Upgrade → Faturamento',type:'ok',to:'fatur'},{label:'Downgrade',type:'back'}]},
+  {id:'fatur',section:'config',title:'Faturamento',desc:'Faturas · cartão · boleto/PIX',
+    actions:[{label:'Histórico de faturas',type:'act'},{label:'Baixar fatura PDF',type:'act'},{label:'Atualizar cartão',type:'act'},{label:'PIX/Boleto (Pagar.me)',type:'act'},{label:'Cancelar plano',type:'err'}]},
+  {id:'integr',section:'config',title:'Integrações',desc:'Conectores externos e API',
+    actions:[{label:'Conectar Google Drive',type:'act'},{label:'Conectar Zapier',type:'act'},{label:'Ver API Key (Enterprise)',type:'act'},{label:'Desconectar',type:'err'}]},
+];
+const CONNECTIONS=[
+  {from:'landing',to:'login',color:'#7F77DD'},{from:'landing',to:'cadastro',color:'#1D9E75'},{from:'landing',to:'precos',color:'#378ADD'},
+  {from:'precos',to:'cadastro',color:'#1D9E75'},{from:'login',to:'cadastro',color:'#7F77DD'},{from:'login',to:'esqsenha',color:'#BA7517'},
+  {from:'login',to:'oauth',color:'#378ADD'},{from:'cadastro',to:'cadplano',color:'#1D9E75'},{from:'cadplano',to:'otpemail',color:'#1D9E75'},
+  {from:'oauth',to:'dashvazio',color:'#1D9E75'},{from:'esqsenha',to:'otpemail',color:'#1D9E75'},{from:'otpemail',to:'novasenha',color:'#1D9E75'},
+  {from:'novasenha',to:'contaver',color:'#1D9E75'},{from:'contaver',to:'bvindas',color:'#1D9E75'},{from:'bvindas',to:'confws',color:'#1D9E75'},
+  {from:'confws',to:'persm',color:'#1D9E75'},{from:'persm',to:'primed',color:'#1D9E75'},{from:'primed',to:'tourok',color:'#BA7517'},
+  {from:'tourok',to:'dashvazio',color:'#7F77DD'},{from:'dashvazio',to:'dashd',color:'#7F77DD'},{from:'dashd',to:'notif',color:'#7F77DD'},
+  {from:'dashd',to:'listap',color:'#0F6E56'},{from:'dashvazio',to:'editor',color:'#1D9E75'},{from:'listap',to:'detdoc',color:'#0F6E56'},
+  {from:'detdoc',to:'histv',color:'#0F6E56'},{from:'detdoc',to:'audit',color:'#0F6E56'},{from:'detdoc',to:'editor',color:'#534AB7'},
+  {from:'detdoc',to:'confenv',color:'#BA7517'},{from:'editor',to:'preva4',color:'#534AB7'},{from:'editor',to:'confdoc',color:'#534AB7'},
+  {from:'editor',to:'confenv',color:'#BA7517'},{from:'galeria',to:'prevtpl',color:'#1D9E75'},{from:'prevtpl',to:'edittpl',color:'#1D9E75'},
+  {from:'edittpl',to:'editor',color:'#1D9E75'},{from:'confenv',to:'statenv',color:'#1D9E75'},{from:'statenv',to:'pagsign',color:'#BA7517'},
+  {from:'pagsign',to:'confign',color:'#1D9E75'},{from:'confign',to:'docfinal',color:'#1D9E75'},{from:'membros',to:'convidar',color:'#1D9E75'},
+  {from:'convidar',to:'pendinv',color:'#1D9E75'},{from:'perfil',to:'seg2fa',color:'#888780'},{from:'planou',to:'fatur',color:'#888780'},
+];
+
+// ── SWIM-LANE LAYOUT ──
+const CARD_W=234, CARD_H=212, CARD_GAP_X=46;
+const LANE_PAD_TOP=52, LANE_PAD_BOT=26, LANE_GAP=34, CANVAS_PAD=70;
+const LANE_ORDER=['public','auth','onboarding','dashboard','docs','editor','templates','sign','workspace','config'];
+
+const bySection={};
+SCREENS.forEach(s=>{(bySection[s.section]=bySection[s.section]||[]).push(s);});
+
+const pos={}, areaBounds={};
+let laneY=70, maxLaneW=0;
+LANE_ORDER.forEach(sec=>{
+  const screens=bySection[sec];
+  const laneW=CANVAS_PAD+screens.length*(CARD_W+CARD_GAP_X)-CARD_GAP_X+30;
+  maxLaneW=Math.max(maxLaneW,laneW);
+});
+LANE_ORDER.forEach(sec=>{
+  const screens=bySection[sec];
+  const laneH=LANE_PAD_TOP+CARD_H+LANE_PAD_BOT;
+  areaBounds[sec]={x:60,y:laneY,w:maxLaneW,h:laneH};
+  screens.forEach((s,i)=>{ pos[s.id]={x:60+CANVAS_PAD+i*(CARD_W+CARD_GAP_X),y:laneY+LANE_PAD_TOP}; });
+  laneY+=laneH+LANE_GAP;
+});
+
+let scale=.62,tx=40,ty=30,panning=false,pStart={},pOrig={},activeScreen=null,activeSec='all';
+const elMap={};
+
+function init(){
+  const canvas=document.getElementById('canvas'),svg=document.getElementById('svg');
+  // Lanes
+  LANE_ORDER.forEach(sec=>{
+    const b=areaBounds[sec],sd=SECTIONS[sec];
+    const lane=document.createElement('div');
+    lane.className='lane';lane.dataset.sec=sec;
+    lane.style.cssText=`left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;border-color:${sd.color}44;background:${sd.bg}55`;
+    canvas.appendChild(lane);
+    const head=document.createElement('div');
+    head.className='lane-head';head.dataset.sec=sec;
+    head.style.cssText=`left:${b.x+16}px;top:${b.y+13}px;background:#fff;border:1px solid ${sd.color};color:${sd.color}`;
+    head.innerHTML=`<div class="dot" style="background:${sd.color}"></div>${sd.label}<div class="lane-count" style="color:${sd.color}">${bySection[sec].length} telas</div>`;
+    canvas.appendChild(head);
+  });
+  // Markers
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  [...new Set(CONNECTIONS.map(c=>c.color))].forEach(color=>{
+    const m=document.createElementNS('http://www.w3.org/2000/svg','marker');
+    m.setAttribute('id','ar-'+color.replace('#',''));m.setAttribute('viewBox','0 0 10 10');
+    m.setAttribute('refX','8');m.setAttribute('refY','5');m.setAttribute('markerWidth','5');m.setAttribute('markerHeight','5');m.setAttribute('orient','auto-start-reverse');
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d','M0 0L10 5L0 10z');p.setAttribute('fill',color);m.appendChild(p);defs.appendChild(m);
+  });
+  svg.appendChild(defs);
+  // Connections
+  CONNECTIONS.forEach(conn=>{
+    const f=pos[conn.from],t=pos[conn.to];if(!f||!t)return;
+    let x1,y1,x2,y2;
+    if(t.x>=f.x){x1=f.x+CARD_W;y1=f.y+CARD_H/2;x2=t.x;y2=t.y+CARD_H/2;}
+    else{x1=f.x;y1=f.y+CARD_H/2;x2=t.x+CARD_W;y2=t.y+CARD_H/2;}
+    const sameLane=Math.abs(y2-y1)<5;
+    let d;
+    if(sameLane){const dx=Math.abs(x2-x1)*0.45;const c1x=x1+(x2>x1?dx:-dx),c2x=x2+(x2>x1?-dx:dx);d=`M${x1},${y1} C${c1x},${y1} ${c2x},${y2} ${x2},${y2}`;}
+    else{const mx=(x1+x2)/2;d=`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;}
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);path.setAttribute('class','conn-path');path.setAttribute('stroke',conn.color);
+    path.setAttribute('marker-end','url(#ar-'+conn.color.replace('#','')+')');
+    path.dataset.from=conn.from;path.dataset.to=conn.to;
+    svg.appendChild(path);
+  });
+  // Screens
+  SCREENS.forEach(s=>{
+    const sd=SECTIONS[s.section],p=pos[s.id];
+    const idx=bySection[s.section].indexOf(s)+1;
+    const el=document.createElement('div');
+    el.className='screen';el.id='sc-'+s.id;
+    el.style.cssText=`left:${p.x}px;top:${p.y}px;border-color:${sd.color}`;
+    el.innerHTML=`<div class="s-strip" style="background:${sd.color}"></div>
+      <div class="s-body">
+        <div class="s-num">${s.section.toUpperCase().slice(0,4)}-${String(idx).padStart(2,'0')}</div>
+        <div class="s-title">${s.title}</div>
+        <div class="s-desc">${s.desc}</div>
+        <div class="s-tags">
+          ${s.actions.slice(0,3).map(a=>`<div class="tag tag-${a.type}">${a.label}</div>`).join('')}
+          ${s.actions.length>3?`<div class="tag tag-more">+${s.actions.length-3} ações — clique para ver</div>`:''}
+        </div>
+      </div>`;
+    el.addEventListener('click',()=>openDetail(s.id));
+    el.addEventListener('mouseenter',e=>showTip(e,`${s.title} · ${s.actions.length} ações`));
+    el.addEventListener('mouseleave',hideTip);
+    canvas.appendChild(el);
+    elMap[s.id]=el;
+  });
+  applyTransform();setupPan();drawMinimap();
+  setTimeout(()=>document.getElementById('help').style.opacity='0',4500);
+}
+function applyTransform(){
+  document.getElementById('canvas').style.transform=`translate(${tx}px,${ty}px) scale(${scale})`;
+  document.getElementById('zoomd').textContent=Math.round(scale*100)+'%';updateMvp();
+}
+function zoom(f,cx,cy){
+  const r=document.getElementById('wrap').getBoundingClientRect();
+  const px=cx??r.width/2,py=cy??r.height/2;
+  const ns=Math.max(.15,Math.min(2,scale*f));
+  tx=px-(px-tx)*(ns/scale);ty=py-(py-ty)*(ns/scale);scale=ns;applyTransform();
+}
+function resetView(){scale=.62;tx=40;ty=30;applyTransform();}
+function setupPan(){
+  const w=document.getElementById('wrap');
+  w.addEventListener('mousedown',e=>{if(e.target.closest('.screen')||e.target.closest('.detail'))return;panning=true;pStart={x:e.clientX,y:e.clientY};pOrig={x:tx,y:ty};w.classList.add('panning');});
+  window.addEventListener('mousemove',e=>{if(!panning)return;tx=pOrig.x+(e.clientX-pStart.x);ty=pOrig.y+(e.clientY-pStart.y);applyTransform();});
+  window.addEventListener('mouseup',()=>{panning=false;w.classList.remove('panning');});
+  w.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.12:.89,e.clientX,e.clientY);},{passive:false});
+}
+function openDetail(id){
+  const s=SCREENS.find(x=>x.id===id);if(!s)return;
+  const sd=SECTIONS[s.section];activeScreen=id;
+  Object.values(elMap).forEach(el=>el.classList.remove('hl'));
+  elMap[id]?.classList.add('hl');
+  document.getElementById('d-badge').textContent=sd.label;
+  document.getElementById('d-badge').style.cssText=`background:${sd.bg};border:1px solid ${sd.color};color:${sd.color}`;
+  document.getElementById('d-title').textContent=s.title;
+  document.getElementById('d-desc').textContent=s.desc;
+  const groups={act:[],cond:[],ok:[],err:[],back:[]};
+  const labels={act:'Ações do usuário',cond:'Condições / Decisões',ok:'Caminhos de sucesso',err:'Erros / Alertas',back:'Voltar / Cancelar'};
+  const cols={act:{bg:'var(--vl)',bd:'var(--v)',tx:'var(--vd)'},cond:{bg:'var(--al)',bd:'var(--a)',tx:'var(--ad)'},ok:{bg:'var(--gl)',bd:'var(--g)',tx:'var(--gd)'},err:{bg:'var(--cl)',bd:'var(--c)',tx:'var(--cd)'},back:{bg:'var(--grayl)',bd:'var(--gray)',tx:'var(--grayd)'}};
+  const ic={act:'→',cond:'?',ok:'✓',err:'!',back:'←'};
+  s.actions.forEach(a=>groups[a.type]?.push(a));
+  let body='';
+  Object.entries(groups).forEach(([t,acts])=>{
+    if(!acts.length)return;const col=cols[t];
+    body+=`<div class="d-sec"><div class="d-sec-t">${labels[t]} <span class="n">${acts.length}</span></div><div class="d-tags">
+      ${acts.map(a=>`<div class="d-tag ${a.to?'clickable':''}" style="background:${col.bg};border-color:${col.bd}" ${a.to?`onclick="navTo('${a.to}')"`:''}>
+        <span class="ic" style="color:${col.tx}">${ic[t]}</span>
+        <span style="color:${col.tx}">${a.label}${a.to?` <span style="opacity:.55;font-size:10px">→ ${SCREENS.find(x=>x.id===a.to)?.title||''}</span>`:''}</span></div>`).join('')}
+    </div></div>`;
+  });
+  const inc=CONNECTIONS.filter(c=>c.to===id);
+  if(inc.length){
+    body+=`<div class="d-sec"><div class="d-sec-t">Telas que levam aqui <span class="n">${inc.length}</span></div><div class="d-tags">
+      ${inc.map(c=>{const src=SCREENS.find(x=>x.id===c.from);return src?`<div class="d-tag clickable" style="background:var(--bg);border-color:var(--border)" onclick="navTo('${c.from}')"><span class="ic" style="color:var(--text3)">←</span><span style="color:var(--text2)">${src.title}</span></div>`:'';}).join('')}
+    </div></div>`;
+  }
+  document.getElementById('d-body').innerHTML=body;
+  const ids=SCREENS.map(x=>x.id),idx=ids.indexOf(id);
+  document.getElementById('d-nav').innerHTML=`
+    <button class="nbtn" onclick="navTo('${ids[(idx-1+ids.length)%ids.length]}')">← Anterior</button>
+    <button class="nbtn primary" onclick="focusScreen('${id}')">Focar no mapa</button>
+    <button class="nbtn" onclick="navTo('${ids[(idx+1)%ids.length]}')">Próxima →</button>`;
+  document.getElementById('detail').classList.add('open');
+}
+function navTo(id){openDetail(id);focusScreen(id);}
+function focusScreen(id){
+  const p=pos[id];if(!p)return;
+  const r=document.getElementById('wrap').getBoundingClientRect();
+  const ns=Math.max(scale,.75);
+  tx=r.width/2-(p.x+CARD_W/2)*ns-170;ty=r.height/2-(p.y+CARD_H/2)*ns;scale=ns;applyTransform();
+}
+function closeDetail(){document.getElementById('detail').classList.remove('open');Object.values(elMap).forEach(el=>el.classList.remove('hl'));activeScreen=null;}
+function filterSec(sec,btn){
+  activeSec=sec;
+  document.querySelectorAll('.filters .tbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  SCREENS.forEach(s=>{const el=elMap[s.id];if(el)el.classList.toggle('dim',sec!=='all'&&s.section!==sec);});
+  document.querySelectorAll('.conn-path').forEach(p=>{const fs=SCREENS.find(x=>x.id===p.dataset.from)?.section;p.classList.toggle('dim',sec!=='all'&&fs!==sec);});
+  document.querySelectorAll('.lane,.lane-head').forEach(a=>{a.style.opacity=(sec==='all'||a.dataset.sec===sec)?'1':'.28';});
+  if(sec!=='all'){const b=areaBounds[sec];const r=document.getElementById('wrap').getBoundingClientRect();const ns=.7;tx=r.width/2-(b.x+Math.min(b.w,1400)/2)*ns;ty=r.height/2-(b.y+b.h/2)*ns;scale=ns;applyTransform();}
+}
+function doSearch(q){
+  const res=document.getElementById('sresults');
+  if(!q.trim()){res.style.display='none';return;}
+  const m=SCREENS.filter(s=>s.title.toLowerCase().includes(q.toLowerCase())||s.desc.toLowerCase().includes(q.toLowerCase())||s.actions.some(a=>a.label.toLowerCase().includes(q.toLowerCase())));
+  if(!m.length){res.style.display='none';return;}
+  res.style.display='block';
+  res.innerHTML=m.slice(0,8).map(s=>`<div class="sresult" onclick="navTo('${s.id}');document.getElementById('sresults').style.display='none';document.getElementById('sinput').value=''"><div class="sresult-n">${s.title}</div><div class="sresult-a">${SECTIONS[s.section].label}</div></div>`).join('');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.search')&&!e.target.closest('.sresults'))document.getElementById('sresults').style.display='none';});
+function showTip(e,t){const tip=document.getElementById('tooltip');tip.textContent=t;tip.style.opacity='1';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY-30)+'px';}
+function hideTip(){document.getElementById('tooltip').style.opacity='0';}
+function drawMinimap(){
+  const mm=document.getElementById('minimap');
+  let maxX=0,maxY=0;Object.values(areaBounds).forEach(b=>{maxX=Math.max(maxX,b.x+b.w);maxY=Math.max(maxY,b.y+b.h);});
+  mm._cw=maxX+60;mm._ch=maxY+60;
+  const sx=210/mm._cw,sy=130/mm._ch;
+  LANE_ORDER.forEach(sec=>{
+    const b=areaBounds[sec],sd=SECTIONS[sec];const d=document.createElement('div');
+    d.style.cssText=`position:absolute;left:${b.x*sx}px;top:${b.y*sy}px;width:${b.w*sx}px;height:${b.h*sy}px;background:${sd.color}55;border-radius:2px`;
+    mm.appendChild(d);
+  });
+  updateMvp();
+}
+function updateMvp(){
+  const mm=document.getElementById('minimap');if(!mm._cw)return;
+  const sx=210/mm._cw,sy=130/mm._ch;
+  const r=document.getElementById('wrap').getBoundingClientRect();
+  const vp=document.getElementById('mvp');
+  vp.style.left=Math.max(0,(-tx/scale)*sx)+'px';vp.style.top=Math.max(0,(-ty/scale)*sy)+'px';
+  vp.style.width=Math.min(210,(r.width/scale)*sx)+'px';vp.style.height=Math.min(130,(r.height/scale)*sy)+'px';
+}
+document.getElementById('minimap').addEventListener('click',e=>{
+  const mm=document.getElementById('minimap');const r=mm.getBoundingClientRect();
+  const mx=(e.clientX-r.left)/210*mm._cw,my=(e.clientY-r.top)/130*mm._ch;
+  const wr=document.getElementById('wrap').getBoundingClientRect();
+  tx=wr.width/2-mx*scale;ty=wr.height/2-my*scale;applyTransform();
+});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='Escape')closeDetail();if(e.key==='+')zoom(1.2);if(e.key==='-')zoom(.8);if(e.key==='0')resetView();if(e.key==='f'&&activeScreen)focusScreen(activeScreen);});
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
